@@ -2,8 +2,8 @@
 
 顺丰33周年活动 - 完成任务抽勋章
 Author: 爱学习的呆子
-Version: 1.0.0
-Date: 2026-03-17
+Version: 1.1.0
+Date: 2026-03-19
 
 顺丰暗号环境变量：sfsyah
 
@@ -24,6 +24,7 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 # 禁用SSL警告
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+inviteId = ['C6E5C3BDD7624520AB869D2AF9E75D95']
 
 # ==================== 配置常量 ====================
 PROXY_TIMEOUT = 15
@@ -55,7 +56,7 @@ SKIP_TASK_TYPES = [
     'CHARGE_COLLECT_ALL',               # 充值1000元一键集齐
     'OPEN_FAMILY_HOME_MUTUAL',          # 开通家庭8折互寄权益
     'BUY_ANNIVERSARY_LIMITED_PACKET',   # 33周年宠粉券包
-    'INTEGRAL_EXCHANGE',                # 积分兑换抽勋章次数
+    # 'INTEGRAL_EXCHANGE',                # 积分兑换抽勋章次数（已特殊处理）
 ]
 
 
@@ -233,9 +234,11 @@ class SFHttpClient:
 
 # ==================== 周年活动任务执行器 ====================
 class AnniversaryExecutor:
-    def __init__(self, http: SFHttpClient, logger: Logger):
+    # MODIFIED: 增加 user_id 参数
+    def __init__(self, http: SFHttpClient, logger: Logger, user_id: str):
         self.http = http
         self.logger = logger
+        self.user_id = user_id
 
     # ---------- API 方法 ----------
 
@@ -270,6 +273,24 @@ class AnniversaryExecutor:
         if resp and resp.get('success'):
             return True
         return False
+
+    # ========== 新增：专用接口-领取寄件会员权益 ==========
+    def receive_vip_benefit(self) -> bool:
+        """领取寄件会员权益（特殊任务）"""
+        url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberManage~memberEquity~commonEquityReceive'
+        data = {"key": "surprise_benefit"}
+        resp = self.http.request(url, data=data)
+        if resp and resp.get('success'):
+            self.logger.success(f'[领取寄件会员权益] 完成成功')
+            # 可选：解析返回的奖励信息
+            if resp.get('obj'):
+                self.logger.info(f'领取详情: {resp["obj"]}')
+            return True
+        else:
+            error_msg = resp.get('errorMessage', '未知错误') if resp else '请求失败'
+            self.logger.warning(f'[领取寄件会员权益] 完成失败: {error_msg}')
+            return False
+    # =================================================
 
     def fetch_tasks_reward(self) -> Optional[Dict]:
         """领取已完成任务的奖励（获得抽勋章次数）"""
@@ -306,6 +327,17 @@ class AnniversaryExecutor:
             self.logger.error(f'抽勋章失败: {error_msg}')
             return None
 
+    def give_countdown_chance(self) -> Optional[Dict]:
+        """领取倒计时奖励（每日一次免费抽勋章机会）"""
+        url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~anniversary2026CardService~giveClaimChance'
+        resp = self.http.request(url, data={})
+        if resp and resp.get('success'):
+            return resp.get('obj', {})
+        else:
+            error_msg = resp.get('errorMessage', '未知错误') if resp else '请求失败'
+            self.logger.warning(f'领取倒计时奖励失败: {error_msg}')
+            return None
+
     def get_user_rest_integral(self) -> int:
         """查询用户剩余积分"""
         url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~activityTaskService~getUserRestIntegral'
@@ -322,14 +354,16 @@ class AnniversaryExecutor:
         if points < 10:
             self.logger.warning(f'积分不足10，无法兑换（当前: {points}）')
             return False
-        # TODO: 需要抓取实际的积分兑换curl来确认接口
-        url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~activityTaskService~integralExchange'
+
+        url = 'https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~anniversary2026TaskService~integralExchange'
         data = {
-            "activityCode": ACTIVITY_CODE,
-            "channelType": "MINI_PROGRAM"
+            "exchangeNum": 1,                # 一次兑换1次机会
+            "activityCode": ACTIVITY_CODE    # 当前活动码
         }
+
         resp = self.http.request(url, data=data)
         if resp and resp.get('success'):
+            self.logger.success('积分兑换成功，获得1次抽勋章次数')
             return True
         else:
             error_msg = resp.get('errorMessage', '未知错误') if resp else '请求失败'
@@ -367,6 +401,29 @@ class AnniversaryExecutor:
         else:
             self.logger.warning(f'提交暗号失败: 请求失败')
             return None
+
+    # ---------- 新增：邀请初始化 ----------
+    def do_invite(self):
+        """发送邀请初始化请求（借鉴自第二段代码）"""
+        try:
+            # 从全局 inviteId 列表中排除自己的 user_id
+            available_invites = [inv for inv in inviteId if inv != self.user_id]
+            if not available_invites:
+                self.logger.warning("没有可用的邀请码（排除自身后为空），跳过邀请")
+                return
+            random_invite = random.choice(available_invites)
+            # self.logger.info(f"随机选择邀请码: {random_invite} (排除自身 {self.user_id})")
+            # 构造邀请请求 URL，使用 commonNoLoginPost
+            url = "https://mcs-mimp-web.sf-express.com/mcs-mimp/commonPost/~memberNonactivity~anniversary2026IndexService~index"
+            data = {"inviteType": 1, "inviteUserId": random_invite}
+            resp = self.http.request(url, data=data)
+            # if resp and resp.get('success'):
+            #     self.logger.success(f"邀请初始化成功，邀请码: {random_invite}")
+            # else:
+            #     error_msg = resp.get('errorMessage', '未知错误') if resp else '请求失败'
+            #     self.logger.warning(f"邀请初始化失败: {error_msg}")
+        except Exception as e:
+            self.logger.error(f"邀请初始化异常: {str(e)}")
 
     # ---------- 业务逻辑 ----------
 
@@ -501,7 +558,15 @@ class AnniversaryExecutor:
                     result['tasks_completed'] += 1
                 continue
 
-            # 有taskCode的任务尝试自动完成
+            # ========== 新增：领取寄件会员权益特殊处理 ==========
+            if task_type == 'RECEIVE_VIP_BENEFIT':
+                self.logger.task(f'[{task_name}] 尝试专用接口领取...')
+                if self.receive_vip_benefit():
+                    result['tasks_completed'] += 1
+                continue
+            # =================================================
+
+            # 有taskCode的任务尝试自动完成（通用接口）
             if task_code:
                 self.logger.task(f'[{task_name}] 尝试完成任务 (taskCode: {task_code})')
                 if self.finish_task(task_code):
@@ -536,6 +601,27 @@ class AnniversaryExecutor:
             if config:
                 milestones = ', '.join([f'{k}个任务得{v}次' for k, v in sorted(config.items(), key=lambda x: int(x[0]))])
                 self.logger.info(f'累计完成任务数: {progress} (里程碑: {milestones})')
+
+    def do_countdown_chance(self, result: Dict) -> None:
+        """领取倒计时奖励（每日免费抽勋章机会）"""
+        self.logger.info('领取倒计时奖励...')
+        time.sleep(1)
+        resp = self.give_countdown_chance()
+        if resp:
+            if resp.get('todayCountdownChanceGiven'):
+                received = resp.get('receivedAccountList', [])
+                if received:
+                    for item in received:
+                        currency = item.get('currency', '')
+                        amount = item.get('amount', 0)
+                        self.logger.success(f'倒计时奖励: {currency} x{amount}')
+                else:
+                    self.logger.success('倒计时奖励已领取')
+            else:
+                self.logger.info('今日倒计时奖励未到领取时间')
+        else:
+            self.logger.warning('倒计时奖励领取失败')
+
 
     def do_claim_medals(self, result: Dict) -> None:
         """抽勋章直到没有次数"""
@@ -613,6 +699,9 @@ class AnniversaryExecutor:
             'claim_balance': 0,
         }
 
+        # MODIFIED: 在任务开始前先发送邀请
+        self.do_invite()
+
         # 0. 获取活动首页信息
         index_info = self.get_activity_index()
         if index_info:
@@ -670,8 +759,8 @@ def run_account(account_url: str, index: int) -> Dict[str, Any]:
     # 随机延迟
     time.sleep(random.uniform(1, 3))
 
-    # 执行周年活动
-    executor = AnniversaryExecutor(http, logger)
+    # MODIFIED: 将 user_id 传递给 AnniversaryExecutor
+    executor = AnniversaryExecutor(http, logger, user_id)
     activity_result = executor.run()
 
     return {
